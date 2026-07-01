@@ -382,22 +382,18 @@ body {
 }
 
 /* 6. FEEDING GAME */
-.mouth-visualizer {
+.catcher-avatar {
     position: absolute;
-    bottom: 10px;
-    left: calc(50% - 70px);
-    width: 140px;
-    height: 140px;
+    bottom: 15px;
+    left: calc(50% - 45px);
+    width: 90px;
+    height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s;
-    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.1));
-}
-
-.player-panel.rotated .mouth-visualizer {
-    top: 10px;
-    bottom: auto;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.12));
+    touch-action: none;
+    z-index: 20;
 }
 
 .food-item {

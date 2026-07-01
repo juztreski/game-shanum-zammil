@@ -686,25 +686,72 @@ function initBalloonGame() {
 function initFeedingGame() {
     const setupFeedingArea = (container, player, avatarEl, scoreEl, charName) => {
         
-        // 1. Create a large mouth helper visualizer at the center bottom/top
-        const mouthBox = document.createElement('div');
-        mouthBox.className = 'mouth-visualizer';
-        // Add a giant transparent target circle
-        mouthBox.innerHTML = `
-            <svg viewBox="0 0 100 100" width="120" height="120" style="opacity: 0.85; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));">
-                <!-- Large glowing target circle -->
-                <circle cx="50" cy="50" r="45" fill="none" stroke="${charName === 'shanum' ? 'var(--pink-dark)' : 'var(--blue-dark)'}" stroke-width="6" stroke-dasharray="10 6" />
-                <circle cx="50" cy="50" r="35" fill="rgba(255, 255, 255, 0.4)" />
-                <text x="50" y="55" font-family="'Fredoka One', sans-serif" font-size="14" fill="${charName === 'shanum' ? 'var(--pink-text)' : 'var(--blue-text)'}" text-anchor="middle">SUAP SINI!</text>
-            </svg>
-        `;
-        container.appendChild(mouthBox);
+        // 1. Create a draggable catcher-avatar of the character
+        const catcher = document.createElement('div');
+        catcher.className = 'catcher-avatar';
+        catcher.style.left = 'calc(50% - 45px)'; // Initial horizontal center
+        container.appendChild(catcher);
+
+        const updateCatcherAvatar = (expression) => {
+            catcher.innerHTML = CHARACTERS[charName].draw(expression);
+        };
+        updateCatcherAvatar('normal');
 
         const activeFoods = [];
         const foodEmojis = ['🍎', '🍌', '🍓', '🍇', '🍉', '🍍', '🍒', '🍪', '🍩', '🧁', '🍦', '🍕'];
 
+        // Dragging state variables
+        let isDragging = false;
+        const catcherWidth = 90;
+        let catcherCenterX = (container.clientWidth || 300) / 2;
+
+        // Pointer event handlers for draggable character
+        const onPointerDown = (e) => {
+            isDragging = true;
+            catcher.setPointerCapture(e.pointerId);
+            updatePosition(e);
+        };
+
+        const onPointerMove = (e) => {
+            if (!isDragging) return;
+            updatePosition(e);
+        };
+
+        const onPointerUp = (e) => {
+            if (isDragging) {
+                isDragging = false;
+                catcher.releasePointerCapture(e.pointerId);
+            }
+        };
+
+        const updatePosition = (e) => {
+            const rectContainer = container.getBoundingClientRect();
+            let relativeX;
+
+            // Handle horizontal coordinate flip if top panel is rotated 180 degrees
+            if (player === 'top' && state.isTopRotated) {
+                relativeX = rectContainer.right - e.clientX;
+            } else {
+                relativeX = e.clientX - rectContainer.left;
+            }
+
+            const halfWidth = catcherWidth / 2;
+            let leftVal = relativeX - halfWidth;
+            const maxLeft = rectContainer.width - catcherWidth;
+            if (leftVal < 0) leftVal = 0;
+            if (leftVal > maxLeft) leftVal = maxLeft;
+
+            catcher.style.left = `${leftVal}px`;
+            catcherCenterX = leftVal + halfWidth;
+        };
+
+        catcher.addEventListener('pointerdown', onPointerDown);
+        catcher.addEventListener('pointermove', onPointerMove);
+        catcher.addEventListener('pointerup', onPointerUp);
+        catcher.addEventListener('pointercancel', onPointerUp);
+
         function spawnFood() {
-            if (state.currentGame !== 'feed') return;
+            if (state.currentGame !== 'feed' || state.isGameOver) return;
 
             const food = document.createElement('div');
             food.className = 'food-item';
@@ -714,78 +761,10 @@ function initFeedingGame() {
             
             const containerWidth = container.clientWidth || 300;
             const xPos = Math.random() * (containerWidth - 80) + 10;
-            let yPos = -80; // Start offscreen (visual top)
+            let yPos = -80; // Start offscreen
             
             food.style.left = `${xPos}px`;
             food.style.top = `${yPos}px`;
-
-            // Tapping feeds the character instantly
-            const feedCharacter = (e) => {
-                if (e) e.preventDefault();
-                if (food.dataset.eaten) return;
-                food.dataset.eaten = "true";
-
-                // Stop the physics tick for this food item first
-                const idx = activeFoods.findIndex(f => f.element === food);
-                if (idx > -1) activeFoods.splice(idx, 1);
-
-                // Get exact current position relative to container
-                const rectFood = food.getBoundingClientRect();
-                const rectMouth = mouthBox.getBoundingClientRect();
-                const rectContainer = container.getBoundingClientRect();
-
-                const currentX = rectFood.left + rectFood.width / 2 - rectContainer.left;
-                const currentY = rectFood.top + rectFood.height / 2 - rectContainer.top;
-
-                const targetX = rectMouth.left + rectMouth.width / 2 - rectContainer.left;
-                const targetY = rectMouth.top + rectMouth.height / 2 - rectContainer.top;
-
-                // Absolute position the food statically at its current spot
-                food.style.top = `${rectFood.top - rectContainer.top}px`;
-                food.style.left = `${rectFood.left - rectContainer.left}px`;
-                food.style.animation = 'none'; // Stop wiggle
-
-                // Compute transitions from current location
-                const deltaX = targetX - currentX;
-                const deltaY = targetY - currentY;
-
-                // Trigger smooth fly translation
-                food.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s';
-                food.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.2)`;
-                food.style.opacity = '0.5';
-
-                setTimeout(() => {
-                    synth.playEat();
-                    
-                    // Show "Nyam! 😋" visual text
-                    const plusOne = document.createElement('div');
-                    plusOne.className = 'feed-alert';
-                    plusOne.innerText = 'Nyam! 😋';
-                    plusOne.style.left = `${targetX - 40}px`;
-                    plusOne.style.top = `${targetY - 50}px`;
-                    container.appendChild(plusOne);
-                    setTimeout(() => plusOne.remove(), 800);
-
-                    // Morph character expressions
-                    avatarEl.classList.add('eat');
-                    updateAvatar(charName, 'eating');
-                    
-                    setTimeout(() => {
-                        avatarEl.classList.remove('eat');
-                        updateAvatar(charName, 'normal');
-                    }, 800);
-
-                    // Score logic
-                    state.scores[player]++;
-                    scoreEl.innerText = state.scores[player];
-                    checkWinCondition(player);
-
-                    food.remove();
-                }, 400);
-            };
-
-            food.addEventListener('touchstart', feedCharacter, { passive: false });
-            food.addEventListener('mousedown', feedCharacter);
 
             container.appendChild(food);
 
@@ -793,19 +772,66 @@ function initFeedingGame() {
                 element: food,
                 y: yPos,
                 x: xPos,
-                speed: 1.0 + Math.random() * 1.5
+                speed: 1.2 + Math.random() * 1.8
             };
             activeFoods.push(foodObj);
         }
 
-        // Movement ticker
+        // Movement ticker & Collision loop
         function tick() {
-            if (state.currentGame !== 'feed') return;
+            if (state.currentGame !== 'feed' || state.isGameOver) return;
 
             for (let i = activeFoods.length - 1; i >= 0; i--) {
                 const f = activeFoods[i];
                 f.y += f.speed;
                 f.element.style.top = `${f.y}px`;
+
+                // Calculate vertical and horizontal bounds for collision
+                const foodCenterX = f.x + 30;
+                const catcherTop = container.clientHeight - 110;
+                const catcherBottom = container.clientHeight - 10;
+
+                // Check if food coordinates overlap with catcher center
+                if (f.y >= catcherTop && f.y <= catcherBottom) {
+                    const dist = Math.abs(foodCenterX - catcherCenterX);
+                    if (dist < 55) {
+                        // Collided! Trigger eat action
+                        synth.playEat();
+
+                        // Show visual "Nyam!" alert above the catcher
+                        const plusOne = document.createElement('div');
+                        plusOne.className = 'feed-alert';
+                        plusOne.innerText = 'Nyam! 😋';
+                        plusOne.style.left = `${catcherCenterX - 45}px`;
+                        plusOne.style.top = `${container.clientHeight - 145}px`;
+                        container.appendChild(plusOne);
+                        setTimeout(() => plusOne.remove(), 800);
+
+                        // Morph catcher facial expressions & animate bounce
+                        catcher.classList.add('eat');
+                        updateCatcherAvatar('eating');
+
+                        avatarEl.classList.add('eat');
+                        updateAvatar(charName, 'eating');
+                        
+                        setTimeout(() => {
+                            catcher.classList.remove('eat');
+                            updateCatcherAvatar('normal');
+                            avatarEl.classList.remove('eat');
+                            updateAvatar(charName, 'normal');
+                        }, 800);
+
+                        // Score logic & check win
+                        state.scores[player]++;
+                        scoreEl.innerText = state.scores[player];
+                        checkWinCondition(player);
+
+                        // Cleanup food element
+                        f.element.remove();
+                        activeFoods.splice(i, 1);
+                        continue;
+                    }
+                }
 
                 // If food falls past the screen limit, remove it
                 if (f.y > container.clientHeight + 100) {
