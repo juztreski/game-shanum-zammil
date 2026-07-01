@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dunia Bermain Shanum & Zammil - Game Anak 2 Player</title>
+    <meta name="description" content="Game interaktif split-screen gratis untuk balita (di bawah 3 tahun). Bermain bersama Shanum dan Zammil!">
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for child-friendly bubble typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Fredoka+One&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- 1. START OVERLAY (Enables Audio Context in Browser) -->
+    <div id="start-overlay" class="overlay">
+        <div class="start-card">
+            <h1>🌟 Shanum & Zammil 🌟</h1>
+            <p>Main Berdua Yuk!</p>
+            <button id="btn-start" class="bubble-btn large">MULAI! ▶</button>
+        </div>
+    </div>
+
+    <!-- 2. MAIN LAYOUT (Split Screen) -->
+    <div id="game-container">
+        
+        <!-- TOP PLAYER PANEL: SHANUM (Player 1) -->
+        <div id="player-top" class="player-panel pink-theme">
+            
+            <!-- Character Header -->
+            <div class="panel-header">
+                <div class="character-container" id="avatar-shanum">
+                    <!-- Dynamic SVG inserted via JS -->
+                </div>
+                <div class="score-display">Skor: <span id="score-top">0</span></div>
+            </div>
+
+            <!-- Game Space Area for Shanum -->
+            <div class="game-area" id="area-top">
+                <!-- Content injected dynamically -->
+            </div>
+
+        </div>
+
+        <!-- CENTER CONTROL DIVIDER -->
+        <div id="divider-bar">
+            <button id="btn-home" class="divider-btn hidden">🏠 Menu</button>
+            <button id="btn-rotate" class="divider-btn">🔄 Putar Layar</button>
+        </div>
+
+        <!-- BOTTOM PLAYER PANEL: ZAMMIL (Player 2) -->
+        <div id="player-bottom" class="player-panel blue-theme">
+            
+            <!-- Character Header -->
+            <div class="panel-header">
+                <div class="character-container" id="avatar-zammil">
+                    <!-- Dynamic SVG inserted via JS -->
+                </div>
+                <div class="score-display">Skor: <span id="score-bottom">0</span></div>
+            </div>
+
+            <!-- Game Space Area for Zammil -->
+            <div class="game-area" id="area-bottom">
+                <!-- Content injected dynamically -->
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 3. TEMPLATES FOR HOME SCREEN & GAME SCREEN -->
+    <!-- Home Menu Template (will be injected into player panels) -->
+    <template id="template-menu-top">
+        <div class="menu-screen">
+            <h2>Pilih Mainan Shanum! 💖</h2>
+            <div class="menu-buttons">
+                <button class="menu-btn balloon-btn" data-game="balloon">🎈 Tepok Balon</button>
+                <button class="menu-btn feed-btn" data-game="feed">🍎 Beri Makan</button>
+                <button class="menu-btn music-btn" data-game="music">🎵 Suara Hewan</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="template-menu-bottom">
+        <div class="menu-screen">
+            <h2>Pilih Mainan Zammil! 🦖</h2>
+            <div class="menu-buttons">
+                <button class="menu-btn balloon-btn" data-game="balloon">🎈 Tepok Balon</button>
+                <button class="menu-btn feed-btn" data-game="feed">🍎 Beri Makan</button>
+                <button class="menu-btn music-btn" data-game="music">🎵 Suara Hewan</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="app.js"></script>
+</body>
+</html>
