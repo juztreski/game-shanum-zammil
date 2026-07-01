@@ -519,3 +519,198 @@ body {
         opacity: 0;
     }
 }
+
+/* 9. WIN STATE OVERLAYS */
+.win-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+.win-overlay.hidden {
+    display: none !important;
+}
+
+.win-card {
+    background: white;
+    padding: 30px;
+    border-radius: 35px;
+    text-align: center;
+    border: 8px solid;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    max-width: 85%;
+    transform: scale(0.9);
+    animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.pink-theme .win-card {
+    border-color: var(--pink-dark);
+    color: var(--pink-text);
+}
+
+.blue-theme .win-card {
+    border-color: var(--blue-dark);
+    color: var(--blue-text);
+}
+
+.win-card h2 {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    animation: pulse 1s infinite alternate;
+}
+
+.win-card p {
+    font-size: 1.3rem;
+    margin-bottom: 25px;
+}
+
+.win-restart-btn {
+    border: none;
+    border-radius: 30px;
+    padding: 12px 36px;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: white;
+    cursor: pointer;
+    font-family: 'Fredoka One', sans-serif;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.pink-theme .win-restart-btn {
+    background: linear-gradient(135deg, var(--pink-dark) 0%, var(--pink-mid) 100%);
+    box-shadow: 0 6px 0 #D6336C;
+}
+
+.blue-theme .win-restart-btn {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+    box-shadow: 0 6px 0 #1C7ED6;
+}
+
+.win-restart-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+}
+
+/* Menu button themes for new games */
+.star-btn {
+    background: linear-gradient(135deg, #FFE066 0%, #FFEC99 100%);
+    border-bottom: 8px solid #F59F00;
+    color: #855C00;
+}
+
+.egg-btn {
+    background: linear-gradient(135deg, #BE4BDB 0%, #E599F7 100%);
+    border-bottom: 8px solid #9C36B5;
+}
+
+/* 10. CATCH THE STAR GAME */
+.star-item {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    cursor: pointer;
+    font-size: 3.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.1));
+    animation: star-bounce 0.6s ease infinite alternate;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.cloud-item {
+    position: absolute;
+    font-size: 4rem;
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+/* 11. DINO EGG GAME */
+.egg-container {
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.egg-sprite {
+    width: 130px;
+    height: 160px;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.12));
+    transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.egg-container.shake .egg-sprite {
+    animation: egg-shake 0.2s infinite alternate;
+}
+
+.egg-hint {
+    margin-top: 15px;
+    background: rgba(255,255,255,0.7);
+    padding: 6px 14px;
+    border-radius: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    pointer-events: none;
+    border: 2px dashed #999;
+}
+
+.pink-theme .egg-hint {
+    color: var(--pink-text);
+    border-color: var(--pink-mid);
+}
+
+.blue-theme .egg-hint {
+    color: var(--blue-text);
+    border-color: var(--blue-mid);
+}
+
+/* New Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    70% { transform: scale(0.9); opacity: 0.9; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.05); }
+}
+
+@keyframes star-bounce {
+    0% { transform: translateY(0) scale(1) rotate(0deg); }
+    100% { transform: translateY(-15px) scale(1.08) rotate(15deg); }
+}
+
+@keyframes egg-shake {
+    0% { transform: rotate(-5deg) scale(1); }
+    100% { transform: rotate(5deg) scale(1.05); }
+}
+
+@keyframes pop-up {
+    0% { transform: translateY(30px) scale(0.5); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}

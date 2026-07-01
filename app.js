@@ -90,6 +90,52 @@ class ToddlerSoundSynth {
         });
     }
 
+    // Egg Tap: Quick wood block / popping sound
+    playWoodblock() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+    }
+
+    // Victory Cheer: longer cute chime melody
+    playCheer() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98, 2093.00]; // C5, E5, G5, C6, E6, G6, C7
+        
+        notes.forEach((freq, idx) => {
+            const time = now + (idx * 0.08);
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, time);
+            
+            gain.gain.setValueAtTime(0.2, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(time);
+            osc.stop(time + 0.4);
+        });
+    }
+
     // Animal Sound: Cat Meow
     playCat() {
         this.init();
@@ -330,12 +376,14 @@ const state = {
         top: 0,
         bottom: 0
     },
-    currentGame: 'menu', // 'menu', 'balloon', 'feed', 'music'
+    currentGame: 'menu', // 'menu', 'balloon', 'feed', 'music', 'star', 'egg'
     isTopRotated: false,
     balloonSpeed: 2, // pixels per frame
     balloonIntervals: { top: null, bottom: null },
     foodIntervals: { top: null, bottom: null },
-    activeLoops: []
+    starIntervals: { top: null, bottom: null },
+    activeLoops: [],
+    isGameOver: false
 };
 
 // UI Elements
@@ -389,6 +437,18 @@ function init() {
         synth.playChime();
         clearAllGameLoops();
         loadMainMenu();
+    });
+
+    // Win overlays Play Again bindings
+    document.querySelectorAll('.win-restart-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Hide win overlays
+            document.getElementById('win-top').classList.add('hidden');
+            document.getElementById('win-bottom').classList.add('hidden');
+            state.isGameOver = false;
+            synth.playChime();
+            loadMainMenu();
+        });
     });
 }
 
@@ -444,6 +504,10 @@ function startGame(gameType) {
         initBalloonGame();
     } else if (gameType === 'feed') {
         initFeedingGame();
+    } else if (gameType === 'star') {
+        initStarGame();
+    } else if (gameType === 'egg') {
+        initEggGame();
     } else if (gameType === 'music') {
         initMusicGame();
     }
@@ -452,9 +516,11 @@ function startGame(gameType) {
 function clearAllGameLoops() {
     // Clear intervals
     clearInterval(state.balloonIntervals.top);
-    clearInterval(state.balloonIntervals.top);
+    clearInterval(state.balloonIntervals.bottom);
     clearInterval(state.foodIntervals.top);
     clearInterval(state.foodIntervals.bottom);
+    clearInterval(state.starIntervals.top);
+    clearInterval(state.starIntervals.bottom);
     
     // Cancel requestAnimationFrame loops
     state.activeLoops.forEach(cancelAnimationFrame);
@@ -561,6 +627,7 @@ function initBalloonGame() {
                 // Score increment
                 state.scores[player]++;
                 scoreEl.innerText = state.scores[player];
+                checkWinCondition(player);
 
                 // Remove from DOM
                 el.remove();
@@ -711,6 +778,7 @@ function initFeedingGame() {
                     // Score logic
                     state.scores[player]++;
                     scoreEl.innerText = state.scores[player];
+                    checkWinCondition(player);
 
                     food.remove();
                 }, 400);
@@ -795,6 +863,12 @@ function initMusicGame() {
                 const clickY = rect.top + rect.height/2 - rectContainer.top;
                 createTapExplosion(clickX, clickY, container);
 
+                // Score + Check Win
+                state.scores[player]++;
+                const pScoreEl = player === 'top' ? elScoreTop : elScoreBottom;
+                pScoreEl.innerText = state.scores[player];
+                checkWinCondition(player);
+
                 // Dance character
                 avatarEl.classList.add('dance');
                 updateAvatar(charName, 'happy');
@@ -816,6 +890,321 @@ function initMusicGame() {
 
     setupMusicArea(elAreaTop, 'top', elAvatarShanum, 'shanum');
     setupMusicArea(elAreaBottom, 'bottom', elAvatarZammil, 'zammil');
+}
+
+
+// --- 8. GLOBAL WIN STATE & CONFETTI CHANGER ---
+function checkWinCondition(player) {
+    if (state.isGameOver) return;
+    
+    if (state.scores[player] >= 30) {
+        state.isGameOver = true;
+        clearAllGameLoops();
+        
+        synth.playCheer();
+        
+        const winId = player === 'top' ? 'win-top' : 'win-bottom';
+        const winOverlay = document.getElementById(winId);
+        if (winOverlay) {
+            winOverlay.classList.remove('hidden');
+        }
+        
+        const winArea = player === 'top' ? elAreaTop : elAreaBottom;
+        let confettiTicks = 0;
+        const confettiInterval = setInterval(() => {
+            if (confettiTicks++ > 25) {
+                clearInterval(confettiInterval);
+                return;
+            }
+            const containerWidth = winArea.clientWidth || 300;
+            const containerHeight = winArea.clientHeight || 300;
+            const x = Math.random() * containerWidth;
+            const y = Math.random() * containerHeight;
+            createTapExplosion(x, y, winArea, ['#FF5E5E', '#FFD43B', '#51CF66', '#339AF0', '#BE4BDB']);
+        }, 150);
+    }
+}
+
+
+// --- 9. MINI-GAME 4: TANGKAP BINTANG (CATCH THE STAR) ---
+function initStarGame() {
+    const setupStarArea = (container, player, avatarEl, scoreEl, charName) => {
+        const activeStars = [];
+
+        const drawSmilingStar = () => {
+            return `
+            <svg viewBox="0 0 100 100" width="100%" height="100%">
+                <polygon points="50,5 64,36 98,36 70,57 81,91 50,70 19,91 30,57 2,36 36,36" fill="#FFD43B" stroke="#F59F00" stroke-width="4" stroke-linejoin="round" />
+                <circle cx="38" cy="45" r="4" fill="#333" />
+                <circle cx="62" cy="45" r="4" fill="#333" />
+                <circle cx="30" cy="52" r="5" fill="#FF8787" opacity="0.6" />
+                <circle cx="70" cy="52" r="5" fill="#FF8787" opacity="0.6" />
+                <path d="M 44 55 Q 50 60 56 55" stroke="#333" stroke-width="3" stroke-linecap="round" fill="none" />
+            </svg>
+            `;
+        };
+
+        function spawnStar() {
+            if (state.currentGame !== 'star' || state.isGameOver) return;
+
+            if (Math.random() > 0.4) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud-item';
+                cloud.innerText = '☁️';
+                const cWidth = container.clientWidth || 300;
+                cloud.style.left = `${Math.random() * (cWidth - 60)}px`;
+                cloud.style.top = `${Math.random() * (container.clientHeight - 80) + 10}px`;
+                container.appendChild(cloud);
+                setTimeout(() => cloud.remove(), 2500);
+            }
+
+            const star = document.createElement('div');
+            star.className = 'star-item';
+            star.innerHTML = drawSmilingStar();
+
+            const cWidth = container.clientWidth || 300;
+            const cHeight = container.clientHeight || 300;
+            const xPos = Math.random() * (cWidth - 80) + 10;
+            const yPos = Math.random() * (cHeight - 120) + 40;
+
+            star.style.left = `${xPos}px`;
+            star.style.top = `${yPos}px`;
+
+            star.style.transform = 'scale(0)';
+            star.style.opacity = '0';
+            container.appendChild(star);
+
+            setTimeout(() => {
+                star.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s';
+                star.style.transform = 'scale(1)';
+                star.style.opacity = '1';
+            }, 50);
+
+            const handleStarTap = (e) => {
+                if (e) e.preventDefault();
+                if (star.dataset.caught) return;
+                star.dataset.caught = "true";
+
+                synth.playPop();
+
+                const rect = star.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const popX = rect.left + rect.width/2 - containerRect.left;
+                const popY = rect.top + rect.height/2 - containerRect.top;
+                createTapExplosion(popX, popY, container, ['#FFD43B', '#FFF']);
+
+                star.style.transition = 'transform 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 0.3s';
+                star.style.transform = 'scale(0) rotate(180deg)';
+                star.style.opacity = '0';
+
+                state.scores[player]++;
+                scoreEl.innerText = state.scores[player];
+                checkWinCondition(player);
+
+                avatarEl.classList.add('dance');
+                updateAvatar(charName, 'happy');
+                setTimeout(() => {
+                    avatarEl.classList.remove('dance');
+                    updateAvatar(charName, 'normal');
+                }, 600);
+
+                setTimeout(() => star.remove(), 400);
+
+                const idx = activeStars.indexOf(star);
+                if (idx > -1) activeStars.splice(idx, 1);
+            };
+
+            star.addEventListener('touchstart', handleStarTap, { passive: false });
+            star.addEventListener('mousedown', handleStarTap);
+
+            setTimeout(() => {
+                if (star.dataset.caught) return;
+                star.style.transition = 'transform 0.3s ease, opacity 0.3s';
+                star.style.transform = 'scale(0)';
+                star.style.opacity = '0';
+                setTimeout(() => star.remove(), 300);
+                const idx = activeStars.indexOf(star);
+                if (idx > -1) activeStars.splice(idx, 1);
+            }, 2000);
+
+            activeStars.push(star);
+        }
+
+        const spawnInterval = setInterval(spawnStar, 1200);
+        if (player === 'top') state.starIntervals.top = spawnInterval;
+        else state.starIntervals.bottom = spawnInterval;
+
+        spawnStar();
+    };
+
+    setupStarArea(elAreaTop, 'top', elAvatarShanum, elScoreTop, 'shanum');
+    setupStarArea(elAreaBottom, 'bottom', elAvatarZammil, elScoreBottom, 'zammil');
+}
+
+
+// --- 10. MINI-GAME 5: KETUK TELUR (DINO EGG) ---
+function initEggGame() {
+    const setupEggArea = (container, player, avatarEl, scoreEl, charName) => {
+        let tapCount = 0;
+        let maxTaps = 5;
+        let isHatching = false;
+
+        const drawEggSVG = (crackLevel, hatched) => {
+            let eggColor = charName === 'shanum' ? 'url(#pink-egg-grad)' : 'url(#blue-egg-grad)';
+            let spots = charName === 'shanum' 
+                ? `<ellipse cx="40" cy="50" rx="8" ry="6" fill="#F06595" opacity="0.5"/>
+                   <ellipse cx="65" cy="80" rx="6" ry="5" fill="#F06595" opacity="0.5"/>` 
+                : `<ellipse cx="40" cy="60" rx="9" ry="7" fill="#1C7ED6" opacity="0.4"/>
+                   <ellipse cx="60" cy="80" rx="7" ry="5" fill="#1C7ED6" opacity="0.4"/>`;
+
+            let cracks = '';
+            if (crackLevel >= 2) {
+                cracks += `<path d="M 50 20 L 52 35 L 45 42 M 52 35 L 60 38" stroke="#495057" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />`;
+            }
+            if (crackLevel >= 4) {
+                cracks += `<path d="M 45 42 L 55 58 L 38 65 M 55 58 L 65 52 L 72 65" stroke="#495057" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />`;
+            }
+
+            if (hatched) {
+                let babySVG = '';
+                if (charName === 'shanum') {
+                    babySVG = `
+                        <circle cx="50" cy="45" r="28" fill="#FFE066" />
+                        <path d="M 38 42 Q 42 38 46 42" stroke="#333" stroke-width="3" stroke-linecap="round" fill="none"/>
+                        <path d="M 54 42 Q 58 38 62 42" stroke="#333" stroke-width="3" stroke-linecap="round" fill="none"/>
+                        <polygon points="50,45 44,52 56,52" fill="#FF922B" />
+                        <circle cx="34" cy="50" r="4" fill="#FF8787" opacity="0.7"/>
+                        <circle cx="66" cy="50" r="4" fill="#FF8787" opacity="0.7"/>
+                        <path d="M 50 17 Q 53 10 50 5 Q 47 10 50 17" fill="#FFE066" />
+                    `;
+                } else {
+                    babySVG = `
+                        <circle cx="50" cy="45" r="28" fill="#51CF66" />
+                        <polygon points="50,17 46,6 54,6" fill="#37B24D" />
+                        <polygon points="28,26 20,20 28,34" fill="#37B24D" />
+                        <polygon points="72,26 80,20 72,34" fill="#37B24D" />
+                        <circle cx="38" cy="42" r="4" fill="#111" />
+                        <circle cx="36" cy="40" r="1" fill="#fff" />
+                        <circle cx="62" cy="42" r="4" fill="#111" />
+                        <circle cx="60" cy="40" r="1" fill="#fff" />
+                        <path d="M 40 52 Q 50 62 60 52" stroke="#2B8A3E" stroke-width="3" stroke-linecap="round" fill="none" />
+                        <circle cx="32" cy="48" r="3" fill="#FF8787" opacity="0.7" />
+                        <circle cx="68" cy="48" r="3" fill="#FF8787" opacity="0.7" />
+                    `;
+                }
+
+                return `
+                <svg viewBox="0 0 100 100" width="100%" height="100%">
+                    <defs>
+                        <linearGradient id="pink-egg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#FFF0F6" />
+                            <stop offset="100%" stop-color="#FAA2C1" />
+                        </linearGradient>
+                        <linearGradient id="blue-egg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#E7F5FF" />
+                            <stop offset="100%" stop-color="#A5D8FF" />
+                        </linearGradient>
+                    </defs>
+                    <g style="transform-origin: 50% 50%; animation: pop-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
+                        ${babySVG}
+                    </g>
+                    <path d="M 15 65 Q 12 78 50 92 Q 88 78 85 65 L 75 58 L 65 65 L 50 55 L 35 65 L 25 58 Z" fill="${charName === 'shanum' ? 'var(--pink-mid)' : 'var(--blue-mid)'}" stroke="#495057" stroke-width="2" />
+                </svg>
+                `;
+            }
+
+            return `
+            <svg viewBox="0 0 100 120" width="100%" height="100%">
+                <defs>
+                    <linearGradient id="pink-egg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#FFF0F6" />
+                        <stop offset="100%" stop-color="#FAA2C1" />
+                    </linearGradient>
+                    <linearGradient id="blue-egg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#E7F5FF" />
+                        <stop offset="100%" stop-color="#A5D8FF" />
+                    </linearGradient>
+                </defs>
+                <path d="M 50 5 C 15 5 15 115 50 115 C 85 115 85 5 50 5 Z" fill="${eggColor}" stroke="#ADB5BD" stroke-width="2" />
+                ${spots}
+                ${cracks}
+            </svg>
+            `;
+        };
+
+        const eggContainer = document.createElement('div');
+        eggContainer.className = 'egg-container';
+        
+        const eggSprite = document.createElement('div');
+        eggSprite.className = 'egg-sprite';
+        eggSprite.innerHTML = drawEggSVG(0, false);
+        eggContainer.appendChild(eggSprite);
+
+        const eggHint = document.createElement('div');
+        eggHint.className = 'egg-hint';
+        eggHint.innerText = 'Ketok 5 kali! 🥚';
+        eggContainer.appendChild(eggHint);
+
+        container.appendChild(eggContainer);
+
+        const triggerEggTap = (e) => {
+            if (e) e.preventDefault();
+            if (isHatching || state.isGameOver) return;
+
+            tapCount++;
+            synth.playWoodblock();
+
+            eggContainer.classList.add('shake');
+            setTimeout(() => eggContainer.classList.remove('shake'), 200);
+
+            const rect = eggSprite.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const popX = rect.left + rect.width / 2 - containerRect.left;
+            const popY = rect.top + rect.height / 2 - containerRect.top;
+            createTapExplosion(popX, popY, container, ['#FFF', '#E599F7', '#FFD43B']);
+
+            eggSprite.innerHTML = drawEggSVG(tapCount, false);
+
+            if (tapCount >= maxTaps) {
+                isHatching = true;
+                eggHint.innerText = 'Hore, Menetas! 🐣🦖';
+                
+                if (charName === 'shanum') {
+                    synth.playDuck();
+                } else {
+                    synth.playDog();
+                }
+                
+                eggSprite.innerHTML = drawEggSVG(tapCount, true);
+                createTapExplosion(popX, popY - 30, container, ['#FFD43B', '#51CF66', '#FF6B6B', '#4DAFFF']);
+
+                state.scores[player] += 5;
+                scoreEl.innerText = state.scores[player];
+                checkWinCondition(player);
+
+                avatarEl.classList.add('dance');
+                updateAvatar(charName, 'happy');
+                
+                setTimeout(() => {
+                    avatarEl.classList.remove('dance');
+                    updateAvatar(charName, 'normal');
+                    
+                    if (state.currentGame === 'egg' && !state.isGameOver) {
+                        eggContainer.remove();
+                        setupEggArea(container, player, avatarEl, scoreEl, charName);
+                    }
+                }, 2000);
+            } else {
+                eggHint.innerText = `Ketok ${maxTaps - tapCount} kali lagi! 🥚`;
+            }
+        };
+
+        eggContainer.addEventListener('touchstart', triggerEggTap, { passive: false });
+        eggContainer.addEventListener('mousedown', triggerEggTap);
+    };
+
+    setupEggArea(elAreaTop, 'top', elAvatarShanum, elScoreTop, 'shanum');
+    setupEggArea(elAreaBottom, 'bottom', elAvatarZammil, elScoreBottom, 'zammil');
 }
 
 
